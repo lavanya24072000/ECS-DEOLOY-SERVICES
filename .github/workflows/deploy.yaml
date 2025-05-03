@@ -63,19 +63,19 @@ jobs:
     - name: Fetch Latest Task Definition Revision for NGINX
       id: nginx-task
       run: |
-        TASK_DEFINITION_REVISION=$(aws ecs describe-task-definition --task-definition $ECR_NGINX_REPO | jq -r '.taskDefinition.revision')
+        TASK_DEFINITION_REVISION=$(aws ecs describe-task-definition --task-definition stage-nginx-task | jq -r '.taskDefinition.revision')
         echo "NGINX_TASK_DEFINITION=$TASK_DEFINITION_REVISION" >> $GITHUB_ENV
  
     - name: Fetch Latest Task Definition Revision for Tomcat
       id: tomcat-task
       run: |
-        TASK_DEFINITION_REVISION=$(aws ecs describe-task-definition --task-definition $ECR_TOMCAT_REPO | jq -r '.taskDefinition.revision')
+        TASK_DEFINITION_REVISION=$(aws ecs describe-task-definition --task-definition stage-tomcat-task | jq -r '.taskDefinition.revision')
         echo "TOMCAT_TASK_DEFINITION=$TASK_DEFINITION_REVISION" >> $GITHUB_ENV
  
     - name: Fetch Latest Task Definition Revision for Apache
       id: apache-task
       run: |
-        TASK_DEFINITION_REVISION=$(aws ecs describe-task-definition --task-definition $ECR_APACHE_REPO | jq -r '.taskDefinition.revision')
+        TASK_DEFINITION_REVISION=$(aws ecs describe-task-definition --task-definition stage-apache-task | jq -r '.taskDefinition.revision')
         echo "APACHE_TASK_DEFINITION=$TASK_DEFINITION_REVISION" >> $GITHUB_ENV
  
     - name: Update NGINX ECS Service
