@@ -7,10 +7,10 @@ on:
  
 env:
   AWS_REGION: us-east-1
-  CLUSTER_NAME: stage-ecs-cluster
-  NGINX_SERVICE: stage-nginx-service
-  TOMCAT_SERVICE: stage-tomcat-service
-  APACHE_SERVICE: stage-apache-service
+  CLUSTER_NAME: preprods-ecs-cluster
+  NGINX_SERVICE: preprods-nginx-service
+  TOMCAT_SERVICE: preprods-tomcat-service
+  APACHE_SERVICE: preprods-apache-service
   ECR_REGISTRY: public.ecr.aws/s2z0q2f0
   ECR_NGINX_REPO: nginx
   ECR_TOMCAT_REPO: tomcat
@@ -63,19 +63,19 @@ jobs:
     - name: Fetch Latest Task Definition Revision for NGINX
       id: nginx-task
       run: |
-        TASK_DEFINITION_REVISION=$(aws ecs describe-task-definition --task-definition stage-nginx-task | jq -r '.taskDefinition.revision')
+        TASK_DEFINITION_REVISION=$(aws ecs describe-task-definition --task-definition preprods-nginx-task | jq -r '.taskDefinition.revision')
         echo "NGINX_TASK_DEFINITION=$TASK_DEFINITION_REVISION" >> $GITHUB_ENV
  
     - name: Fetch Latest Task Definition Revision for Tomcat
       id: tomcat-task
       run: |
-        TASK_DEFINITION_REVISION=$(aws ecs describe-task-definition --task-definition stage-tomcat-task | jq -r '.taskDefinition.revision')
+        TASK_DEFINITION_REVISION=$(aws ecs describe-task-definition --task-definition preprods-tomcat-task | jq -r '.taskDefinition.revision')
         echo "TOMCAT_TASK_DEFINITION=$TASK_DEFINITION_REVISION" >> $GITHUB_ENV
  
     - name: Fetch Latest Task Definition Revision for Apache
       id: apache-task
       run: |
-        TASK_DEFINITION_REVISION=$(aws ecs describe-task-definition --task-definition stage-apache-task | jq -r '.taskDefinition.revision')
+        TASK_DEFINITION_REVISION=$(aws ecs describe-task-definition --task-definition preprods-apache-task | jq -r '.taskDefinition.revision')
         echo "APACHE_TASK_DEFINITION=$TASK_DEFINITION_REVISION" >> $GITHUB_ENV
  
     - name: Update NGINX ECS Service
