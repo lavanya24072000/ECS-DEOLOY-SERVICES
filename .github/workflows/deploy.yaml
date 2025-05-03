@@ -42,7 +42,7 @@ jobs:
       ##############################################
       - name: Build nginx image
         run: |
-          docker build -t ${{ env.ECR_NGINX_REPO }}:latest ./nginx
+          docker build -t ${{ env.ECR_NGINX_REPO }}:latest ./nginx-app
  
       - name: Tag and push nginx image to ECR
         run: |
@@ -70,7 +70,7 @@ jobs:
       ##############################################
       - name: Build tomcat image
         run: |
-          docker build -t ${{ env.ECR_TOMCAT_REPO }}:latest ./tomcat
+          docker build -t ${{ env.ECR_TOMCAT_REPO }}:latest ./tomcat-app
  
       - name: Tag and push tomcat image to ECR
         run: |
@@ -98,7 +98,7 @@ jobs:
       ##############################################
       - name: Build apache image
         run: |
-          docker build -t ${{ env.ECR_APACHE_REPO }}:latest ./apache
+          docker build -t ${{ env.ECR_APACHE_REPO }}:latest ./apache-app
  
       - name: Tag and push apache image to ECR
         run: |
