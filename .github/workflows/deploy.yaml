@@ -7,7 +7,6 @@ on:
  
 env:
   AWS_REGION: us-east-1
-  AWS_REGION: ap-south-1
   CLUSTER_NAME: stage-ecs-cluster
   NGINX_SERVICE: stage-nginx-service
   TOMCAT_SERVICE: stage-tomcat-service
@@ -34,8 +33,8 @@ jobs:
           aws-region: us-east-1
  
       # Log in to Amazon ECR
-      - name: Log in to Amazon ECR
-        run: |
+    - name: Log in to Amazon ECR
+      run: |
           aws ecr-public get-login-password --region us-east-1 | docker login --username AWS --password-stdin public.ecr.aws/s2z0q2f0
  
     - name: Set up Docker Buildx
