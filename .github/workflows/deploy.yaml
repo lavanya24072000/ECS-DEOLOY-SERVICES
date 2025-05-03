@@ -1,13 +1,12 @@
-name: Build and Deploy All Services to ECS
+name: Build, Push, and Deploy to ECS
  
 on:
   push:
     branches:
-      - main
-permissions:
-  id-token: write
-  contents: read
+      - main # Trigger the workflow when pushing to the main branch
+ 
 env:
+  AWS_REGION: us-east-1
   AWS_REGION: ap-south-1
   CLUSTER_NAME: stage-ecs-cluster
   NGINX_SERVICE: stage-nginx-service
@@ -17,18 +16,20 @@ env:
   ECR_NGINX_REPO: nginx
   ECR_TOMCAT_REPO: tomcat
   ECR_APACHE_REPO: apache
- 
+
+permissions:
+  id-token: write
+  contents: read
 jobs:
-  build-and-deploy:
+  build_and_deploy:
     runs-on: ubuntu-latest
- 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
- 
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v2
-        with:
+    - name: Checkout code
+      uses: actions/checkout@v2
+    
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v2
+      with:
           role-to-assume: ${{ secrets.ROLE }}
           aws-region: us-east-1
  
@@ -37,75 +38,55 @@ jobs:
         run: |
           aws ecr-public get-login-password --region us-east-1 | docker login --username AWS --password-stdin public.ecr.aws/s2z0q2f0
  
-      ##############################################
-      # Build, Push & Deploy - Nginx
-      ##############################################
-      - name: Build nginx image
-        run: |
-          docker build -t ${{ env.ECR_NGINX_REPO }}:latest ./nginx-app
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v2
  
-      - name: Tag and push nginx image to ECR
-        run: |
-          docker tag ${{ env.ECR_NGINX_REPO }}:latest ${{ env.ECR_REGISTRY }}/${{ env.ECR_NGINX_REPO }}:latest
-          docker push ${{ env.ECR_REGISTRY }}/${{ env.ECR_NGINX_REPO }}:latest
+    
  
-      - name: Update nginx ECS service
-        run: |
-              TASK_DEFINITION_REVISION=$(aws ecs describe-task-definition --task-definition nginx | jq -r '.taskDefinition.revision')
-              aws ecs update-service --cluster ${{ env.CLUSTER_NAME }} --service ${{ env.NGINX_SERVICE }} --force-new-deployment --task-definition nginx:$TASK_DEFINITION_REVISION
-      ##############################################
-      # Build, Push & Deploy - Tomcat
-      ##############################################
-      - name: Build tomcat image
-        run: |
-          docker build -t ${{ env.ECR_TOMCAT_REPO }}:latest ./tomcat-app
+    - name: Build and Push NGINX Docker image
+      run: |
+        docker build -t nginx .
+        docker tag nginx:latest $ECR_REGISTRY/$ECR_NGINX_REPO:latest
+        docker push $ECR_REGISTRY/$ECR_NGINX_REPO:latest
  
-      - name: Tag and push tomcat image to ECR
-        run: |
-          docker tag ${{ env.ECR_TOMCAT_REPO }}:latest ${{ env.ECR_REGISTRY }}/${{ env.ECR_TOMCAT_REPO }}:latest
-          docker push ${{ env.ECR_REGISTRY }}/${{ env.ECR_TOMCAT_REPO }}:latest
+    - name: Build and Push Tomcat Docker image
+      run: |
+        docker build -t tomcat .
+        docker tag tomcat:latest $ECR_REGISTRY/$ECR_TOMCAT_REPO:latest
+        docker push $ECR_REGISTRY/$ECR_TOMCAT_REPO:latest
  
-      - name: Register tomcat task definition
-        id: tomcat-task-def
-        uses: aws-actions/amazon-ecs-render-task-definition@v1
-        with:
-          task-definition: ecs/tomcat-task-def.json
-          container-name: tomcat-container
-          image: ${{ env.ECR_REGISTRY }}/${{ env.ECR_TOMCAT_REPO }}:latest
+    - name: Build and Push Apache Docker image
+      run: |
+        docker build -t apache .
+        docker tag apache:latest $ECR_REGISTRY/$ECR_APACHE_REPO:latest
+        docker push $ECR_REGISTRY/$ECR_APACHE_REPO:latest
  
-      - name: Deploy tomcat service to ECS
-        uses: aws-actions/amazon-ecs-deploy-task-definition@v1
-        with:
-          task-definition: ${{ steps.tomcat-task-def.outputs.task-definition }}
-          service: ${{ env.TOMCAT_SERVICE }}
-          cluster: ${{ env.CLUSTER_NAME }}
-          wait-for-service-stability: true
+    - name: Fetch Latest Task Definition Revision for NGINX
+      id: nginx-task
+      run: |
+        TASK_DEFINITION_REVISION=$(aws ecs describe-task-definition --task-definition $ECR_NGINX_REPO | jq -r '.taskDefinition.revision')
+        echo "NGINX_TASK_DEFINITION=$TASK_DEFINITION_REVISION" >> $GITHUB_ENV
  
-      ##############################################
-      # Build, Push & Deploy - Apache
-      ##############################################
-      - name: Build apache image
-        run: |
-          docker build -t ${{ env.ECR_APACHE_REPO }}:latest ./apache-app
+    - name: Fetch Latest Task Definition Revision for Tomcat
+      id: tomcat-task
+      run: |
+        TASK_DEFINITION_REVISION=$(aws ecs describe-task-definition --task-definition $ECR_TOMCAT_REPO | jq -r '.taskDefinition.revision')
+        echo "TOMCAT_TASK_DEFINITION=$TASK_DEFINITION_REVISION" >> $GITHUB_ENV
  
-      - name: Tag and push apache image to ECR
-        run: |
-          docker tag ${{ env.ECR_APACHE_REPO }}:latest ${{ env.ECR_REGISTRY }}/${{ env.ECR_APACHE_REPO }}:latest
-          docker push ${{ env.ECR_REGISTRY }}/${{ env.ECR_APACHE_REPO }}:latest
+    - name: Fetch Latest Task Definition Revision for Apache
+      id: apache-task
+      run: |
+        TASK_DEFINITION_REVISION=$(aws ecs describe-task-definition --task-definition $ECR_APACHE_REPO | jq -r '.taskDefinition.revision')
+        echo "APACHE_TASK_DEFINITION=$TASK_DEFINITION_REVISION" >> $GITHUB_ENV
  
-      - name: Register apache task definition
-        id: apache-task-def
-        uses: aws-actions/amazon-ecs-render-task-definition@v1
-        with:
-          task-definition: ecs/apache-task-def.json
-          container-name: apache-container
-          image: ${{ env.ECR_REGISTRY }}/${{ env.ECR_APACHE_REPO }}:latest
+    - name: Update NGINX ECS Service
+      run: |
+        aws ecs update-service --cluster $CLUSTER_NAME --service $NGINX_SERVICE --force-new-deployment --task-definition $ECR_NGINX_REPO:$NGINX_TASK_DEFINITION
  
-      - name: Deploy apache service to ECS
-        uses: aws-actions/amazon-ecs-deploy-task-definition@v1
-        with:
-          task-definition: ${{ steps.apache-task-def.outputs.task-definition }}
-          service: ${{ env.APACHE_SERVICE }}
-          cluster: ${{ env.CLUSTER_NAME }}
-          wait-for-service-stability: true
+    - name: Update Tomcat ECS Service
+      run: |
+        aws ecs update-service --cluster $CLUSTER_NAME --service $TOMCAT_SERVICE --force-new-deployment --task-definition $ECR_TOMCAT_REPO:$TOMCAT_TASK_DEFINITION
  
+    - name: Update Apache ECS Service
+      run: |
+        aws ecs update-service --cluster $CLUSTER_NAME --service $APACHE_SERVICE --force-new-deployment --task-definition $ECR_APACHE_REPO:$APACHE_TASK_DEFINITION
