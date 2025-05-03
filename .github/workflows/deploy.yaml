@@ -1,0 +1,123 @@
+name: Build and Deploy All Services to ECS
+ 
+on:
+  push:
+    branches:
+      - main
+permissions:
+  id-token: write
+  contents: read
+env:
+  AWS_REGION: ap-south-1
+  CLUSTER_NAME: stage-ecs-cluster
+  NGINX_SERVICE: stage-nginx-service
+  TOMCAT_SERVICE: stage-tomcat-service
+  APACHE_SERVICE: stage-apache-service
+  ECR_REGISTRY: public.ecr.aws/s2z0q2f0
+  ECR_NGINX_REPO: nginx
+  ECR_TOMCAT_REPO: tomcat
+  ECR_APACHE_REPO: apache
+ 
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+ 
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+ 
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: ${{ secrets.ROLE }}
+          aws-region: us-east-1
+ 
+      # Log in to Amazon ECR
+      - name: Log in to Amazon ECR
+        run: |
+          aws ecr get-login-password --region ${{ env.AWS_REGION }} | docker login --username AWS --password-stdin ${{ env.ECR_REGISTRY }}
+ 
+      ##############################################
+      # Build, Push & Deploy - Nginx
+      ##############################################
+      - name: Build nginx image
+        run: |
+          docker build -t ${{ env.ECR_NGINX_REPO }}:latest ./nginx
+ 
+      - name: Tag and push nginx image to ECR
+        run: |
+          docker tag ${{ env.ECR_NGINX_REPO }}:latest ${{ env.ECR_REGISTRY }}/${{ env.ECR_NGINX_REPO }}:latest
+          docker push ${{ env.ECR_REGISTRY }}/${{ env.ECR_NGINX_REPO }}:latest
+ 
+      - name: Register nginx task definition
+        id: nginx-task-def
+        uses: aws-actions/amazon-ecs-render-task-definition@v1
+        with:
+          task-definition: ecs/nginx-task-def.json
+          container-name: nginx-container
+          image: ${{ env.ECR_REGISTRY }}/${{ env.ECR_NGINX_REPO }}:latest
+ 
+      - name: Deploy nginx service to ECS
+        uses: aws-actions/amazon-ecs-deploy-task-definition@v1
+        with:
+          task-definition: ${{ steps.nginx-task-def.outputs.task-definition }}
+          service: ${{ env.NGINX_SERVICE }}
+          cluster: ${{ env.CLUSTER_NAME }}
+          wait-for-service-stability: true
+ 
+      ##############################################
+      # Build, Push & Deploy - Tomcat
+      ##############################################
+      - name: Build tomcat image
+        run: |
+          docker build -t ${{ env.ECR_TOMCAT_REPO }}:latest ./tomcat
+ 
+      - name: Tag and push tomcat image to ECR
+        run: |
+          docker tag ${{ env.ECR_TOMCAT_REPO }}:latest ${{ env.ECR_REGISTRY }}/${{ env.ECR_TOMCAT_REPO }}:latest
+          docker push ${{ env.ECR_REGISTRY }}/${{ env.ECR_TOMCAT_REPO }}:latest
+ 
+      - name: Register tomcat task definition
+        id: tomcat-task-def
+        uses: aws-actions/amazon-ecs-render-task-definition@v1
+        with:
+          task-definition: ecs/tomcat-task-def.json
+          container-name: tomcat-container
+          image: ${{ env.ECR_REGISTRY }}/${{ env.ECR_TOMCAT_REPO }}:latest
+ 
+      - name: Deploy tomcat service to ECS
+        uses: aws-actions/amazon-ecs-deploy-task-definition@v1
+        with:
+          task-definition: ${{ steps.tomcat-task-def.outputs.task-definition }}
+          service: ${{ env.TOMCAT_SERVICE }}
+          cluster: ${{ env.CLUSTER_NAME }}
+          wait-for-service-stability: true
+ 
+      ##############################################
+      # Build, Push & Deploy - Apache
+      ##############################################
+      - name: Build apache image
+        run: |
+          docker build -t ${{ env.ECR_APACHE_REPO }}:latest ./apache
+ 
+      - name: Tag and push apache image to ECR
+        run: |
+          docker tag ${{ env.ECR_APACHE_REPO }}:latest ${{ env.ECR_REGISTRY }}/${{ env.ECR_APACHE_REPO }}:latest
+          docker push ${{ env.ECR_REGISTRY }}/${{ env.ECR_APACHE_REPO }}:latest
+ 
+      - name: Register apache task definition
+        id: apache-task-def
+        uses: aws-actions/amazon-ecs-render-task-definition@v1
+        with:
+          task-definition: ecs/apache-task-def.json
+          container-name: apache-container
+          image: ${{ env.ECR_REGISTRY }}/${{ env.ECR_APACHE_REPO }}:latest
+ 
+      - name: Deploy apache service to ECS
+        uses: aws-actions/amazon-ecs-deploy-task-definition@v1
+        with:
+          task-definition: ${{ steps.apache-task-def.outputs.task-definition }}
+          service: ${{ env.APACHE_SERVICE }}
+          cluster: ${{ env.CLUSTER_NAME }}
+          wait-for-service-stability: true
+ 
