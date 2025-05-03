@@ -80,12 +80,12 @@ jobs:
  
     - name: Update NGINX ECS Service
       run: |
-        aws ecs update-service --cluster $CLUSTER_NAME --service $NGINX_SERVICE --force-new-deployment --task-definition $ECR_NGINX_REPO:$NGINX_TASK_DEFINITION
+        aws ecs update-service --cluster $CLUSTER_NAME --service $NGINX_SERVICE --force-new-deployment --task-definition stage-nginx-task:$NGINX_TASK_DEFINITION
  
     - name: Update Tomcat ECS Service
       run: |
-        aws ecs update-service --cluster $CLUSTER_NAME --service $TOMCAT_SERVICE --force-new-deployment --task-definition $ECR_TOMCAT_REPO:$TOMCAT_TASK_DEFINITION
+        aws ecs update-service --cluster $CLUSTER_NAME --service $TOMCAT_SERVICE --force-new-deployment --task-definition stage-tomcat-task:$TOMCAT_TASK_DEFINITION
  
     - name: Update Apache ECS Service
       run: |
-        aws ecs update-service --cluster $CLUSTER_NAME --service $APACHE_SERVICE --force-new-deployment --task-definition $ECR_APACHE_REPO:$APACHE_TASK_DEFINITION
+        aws ecs update-service --cluster $CLUSTER_NAME --service $APACHE_SERVICE --force-new-deployment --task-definition stage-apache-task:$APACHE_TASK_DEFINITION
