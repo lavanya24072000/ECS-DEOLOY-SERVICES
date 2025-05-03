@@ -51,9 +51,8 @@ jobs:
  
       - name: Update nginx ECS service
         run: |
-          aws ecs update-service --cluster ${{ env.CLUSTER_NAME }} --service ${{ env.NGINX_SERVICE }} --force-new-deployment --task-definition ${{ env.ECR_REGISTRY }}/${{ env.ECR_NGINX_REPO }}:latest
- 
- 
+              TASK_DEFINITION_REVISION=$(aws ecs describe-task-definition --task-definition nginx | jq -r '.taskDefinition.revision')
+              aws ecs update-service --cluster ${{ env.CLUSTER_NAME }} --service ${{ env.NGINX_SERVICE }} --force-new-deployment --task-definition nginx:$TASK_DEFINITION_REVISION
       ##############################################
       # Build, Push & Deploy - Tomcat
       ##############################################
