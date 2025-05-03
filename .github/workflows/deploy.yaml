@@ -49,21 +49,10 @@ jobs:
           docker tag ${{ env.ECR_NGINX_REPO }}:latest ${{ env.ECR_REGISTRY }}/${{ env.ECR_NGINX_REPO }}:latest
           docker push ${{ env.ECR_REGISTRY }}/${{ env.ECR_NGINX_REPO }}:latest
  
-      - name: Register nginx task definition
-        id: nginx-task-def
-        uses: aws-actions/amazon-ecs-render-task-definition@v1
-        with:
-          task-definition: ecs/nginx-task-def.json
-          container-name: nginx-container
-          image: ${{ env.ECR_REGISTRY }}/${{ env.ECR_NGINX_REPO }}:latest
+      - name: Update nginx ECS service
+        run: |
+          aws ecs update-service --cluster ${{ env.CLUSTER_NAME }} --service ${{ env.NGINX_SERVICE }} --force-new-deployment --task-definition ${{ env.ECR_REGISTRY }}/${{ env.ECR_NGINX_REPO: }}:latest
  
-      - name: Deploy nginx service to ECS
-        uses: aws-actions/amazon-ecs-deploy-task-definition@v1
-        with:
-          task-definition: ${{ steps.nginx-task-def.outputs.task-definition }}
-          service: ${{ env.NGINX_SERVICE }}
-          cluster: ${{ env.CLUSTER_NAME }}
-          wait-for-service-stability: true
  
       ##############################################
       # Build, Push & Deploy - Tomcat
