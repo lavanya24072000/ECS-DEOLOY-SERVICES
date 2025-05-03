@@ -44,19 +44,19 @@ jobs:
  
     - name: Build and Push NGINX Docker image
       run: |
-        docker build -t nginx .
+        docker build -t nginx ./nginx-app
         docker tag nginx:latest $ECR_REGISTRY/$ECR_NGINX_REPO:latest
         docker push $ECR_REGISTRY/$ECR_NGINX_REPO:latest
  
     - name: Build and Push Tomcat Docker image
       run: |
-        docker build -t tomcat .
+        docker build -t tomcat ./tomcat-app
         docker tag tomcat:latest $ECR_REGISTRY/$ECR_TOMCAT_REPO:latest
         docker push $ECR_REGISTRY/$ECR_TOMCAT_REPO:latest
  
     - name: Build and Push Apache Docker image
       run: |
-        docker build -t apache .
+        docker build -t apache ./apache-app
         docker tag apache:latest $ECR_REGISTRY/$ECR_APACHE_REPO:latest
         docker push $ECR_REGISTRY/$ECR_APACHE_REPO:latest
  
